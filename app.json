@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Topeng Malangan",
+    "slug": "topeng-malangan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "topengmalangan",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Izinkan aplikasi Topeng Malangan menggunakan kamera untuk scan QR Code."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
