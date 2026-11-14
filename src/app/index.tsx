@@ -1,320 +1,579 @@
-import React, { useState } from "react";
+
+import { useEffect, useRef, useState } from "react";
 
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
   Pressable,
-  Alert
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import {
   CameraView,
-  useCameraPermissions
+  useCameraPermissions,
 } from "expo-camera";
 
 import { router } from "expo-router";
 
-import {
-  Screen,
-  Button,
-  C
-} from "../components/ui";
+import api from "../services/api";
 
-import { masks } from "../data/masks";
+// =====================================================
+// WARNA FIGMA
+// =====================================================
+
+const COLORS = {
+  background: "#F4E8D9",
+  sand: "#E2B486",
+  brown: "#8C4F2D",
+  dark: "#3D2B1F",
+  cream: "#FFF8EF",
+  white: "#FFFFFF",
+  muted: "#8C7768",
+};
+
+// =====================================================
+// MENGAMBIL ID TOPENG DARI QR CODE
+// =====================================================
+
+function getTopengIdFromQR(value: string): string | null {
+  const cleanValue = value.trim();
+
+  if (/^\d+$/.test(cleanValue)) {
+    return cleanValue;
+  }
+
+  try {
+    const url = new URL(cleanValue);
+
+    const parts = url.pathname
+      .split("/")
+      .filter(Boolean);
+
+    const lastPart = parts[parts.length - 1];
+
+    if (lastPart && /^\d+$/.test(lastPart)) {
+      return lastPart;
+    }
+  } catch {
+    const parts = cleanValue.split("/");
+    const lastPart = parts[parts.length - 1];
+
+    if (lastPart && /^\d+$/.test(lastPart)) {
+      return lastPart;
+    }
+  }
+
+  return null;
+}
+
+// =====================================================
+// HALAMAN UTAMA SCAN TOPENG
+// =====================================================
 
 export default function HomeScreen() {
   const [permission, requestPermission] =
     useCameraPermissions();
 
-  const [scanning, setScanning] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [torch, setTorch] = useState(false);
 
-  const [scanned, setScanned] = useState(false);
+  const scannedRef = useRef(false);
 
-  const handleBarcode = ({ data }: { data: string }) => {
-    if (scanned) return;
+  // ===================================================
+  // IZIN KAMERA
+  // ===================================================
 
-    setScanned(true);
+  useEffect(() => {
+    if (
+      permission &&
+      !permission.granted &&
+      permission.canAskAgain
+    ) {
+      requestPermission();
+    }
+  }, [permission?.granted]);
 
-    const found = masks.find(
-      item =>
-        data.toUpperCase().includes(item.qrValue) ||
-        item.id === data.toLowerCase()
-    );
+  // ===================================================
+  // PROSES SCAN QR
+  // ===================================================
 
-    setScanning(false);
+  const handleBarcode = async ({
+    data,
+  }: {
+    data: string;
+  }) => {
+    if (scannedRef.current || loading) return;
 
-    if (found) {
-      router.push(`/mask/${found.id}`);
-    } else {
+    scannedRef.current = true;
+    setLoading(true);
+
+    try {
+      console.log("QR terbaca:", data);
+
+      const topengId = getTopengIdFromQR(data);
+
+      if (!topengId) {
+        throw new Error(
+          "QR Code tidak memiliki ID topeng yang valid."
+        );
+      }
+
+      console.log("ID Topeng:", topengId);
+
+      // Mengambil data topeng dari Laravel
+      const topeng = await api.getDetailTopeng(topengId);
+
+      if (!topeng || !topeng.topeng_id) {
+        throw new Error(
+          "Data topeng tidak ditemukan di database."
+        );
+      }
+
+      console.log("Data topeng Laravel:", topeng);
+
+      // Membuka halaman detail topeng
+      // Membuka halaman detail topeng
+// Membuka halaman Video Topeng.
+// ID topeng hasil QR tetap dibawa ke halaman berikutnya.
+router.push({
+  pathname: "/videos",
+  params: {
+    id: String(topeng.topeng_id),
+  },
+} as any);
+
+    } catch (error) {
+      console.error("Gagal scan QR:", error);
+
       Alert.alert(
-        "QR Tidak Ditemukan",
-        "QR Code belum tersedia dalam data dummy."
+        "Topeng Tidak Ditemukan",
+        error instanceof Error
+          ? error.message
+          : "Gagal mengambil data topeng dari server.",
+        [
+          {
+            text: "Scan Lagi",
+            onPress: () => {
+              scannedRef.current = false;
+              setLoading(false);
+            },
+          },
+          {
+            text: "Tutup",
+            onPress: () => {
+              scannedRef.current = false;
+              setLoading(false);
+            },
+          },
+        ]
       );
+
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (scanning) {
+  // ===================================================
+  // TOMBOL KAMERA / FLASH
+  // ===================================================
+
+  const handleCameraButton = async () => {
     if (!permission?.granted) {
-      return (
-        <Screen>
-          <Text style={styles.title}>
-            Akses Kamera
-          </Text>
+      const result = await requestPermission();
 
-          <Text style={styles.body}>
-            Izinkan aplikasi menggunakan kamera
-            untuk memindai QR Code topeng.
-          </Text>
+      if (!result.granted) {
+        Alert.alert(
+          "Izin Kamera",
+          "Izinkan aplikasi menggunakan kamera untuk memindai QR Code."
+        );
+      }
 
-          <Button
-            title="Izinkan Kamera"
-            onPress={requestPermission}
-          />
-
-          <Button
-            title="Kembali"
-            secondary
-            onPress={() => setScanning(false)}
-            style={{ marginTop: 12 }}
-          />
-        </Screen>
-      );
+      return;
     }
 
-    return (
-      <View style={styles.cameraPage}>
-        <CameraView
-          style={StyleSheet.absoluteFill}
-          facing="back"
-          barcodeScannerSettings={{
-            barcodeTypes: ["qr"]
-          }}
-          onBarcodeScanned={
-            scanned ? undefined : handleBarcode
-          }
-        />
+    setTorch((previous) => !previous);
+  };
 
-        <View style={styles.cameraOverlay}>
-          <Text style={styles.cameraTitle}>
-            Arahkan kamera ke QR Code
-          </Text>
-
-          <View style={styles.scanFrame} />
-
-          <Pressable
-            style={styles.close}
-            onPress={() => {
-              setScanning(false);
-              setScanned(false);
-            }}
-          >
-            <Text style={styles.closeText}>
-              Tutup Pemindai
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
+  // ===================================================
+  // TAMPILAN SCAN QR
+  // ===================================================
 
   return (
-    <Screen>
-      <View style={styles.top}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+
+      {/* HEADER */}
+      <View style={styles.header}>
         <Text style={styles.brand}>
           TOPENG MALANGAN
         </Text>
 
-        <Text style={styles.kicker}>
+        <Text style={styles.subtitle}>
           JELAJAHI CERITA DI BALIK TOPENG
         </Text>
       </View>
 
-      <View style={styles.hero}>
-        <Text style={styles.heroSmall}>
+      {/* KARTU SCANNER */}
+      <View style={styles.scannerCard}>
+
+        {/* DEKORASI AWAN */}
+        <View style={styles.cloudLeft} />
+        <View style={styles.cloudRight} />
+
+        <Text style={styles.smallTitle}>
           WARISAN BUDAYA NUSANTARA
         </Text>
 
-        <Text style={styles.heroTitle}>
+        <Text style={styles.title}>
           Scan Topeng
         </Text>
 
-        <Text style={styles.heroDesc}>
-          Arahkan kamera ke barcode atau QR
-          di belakang topeng untuk melihat
-          video dan informasi karakternya.
+        <Text style={styles.description}>
+          Arahkan kamera ke barcode di belakang
+          topeng untuk mulai scan
         </Text>
 
-        <View style={styles.qrIcon}>
-          <Text style={styles.qrSymbol}>
-            ▦
-          </Text>
+        {/* KAMERA SCANNER */}
+        <View style={styles.cameraFrame}>
+          {permission?.granted ? (
+            <>
+              <CameraView
+                style={StyleSheet.absoluteFill}
+                facing="back"
+                enableTorch={torch}
+                barcodeScannerSettings={{
+                  barcodeTypes: ["qr"],
+                }}
+                onBarcodeScanned={
+                  scannedRef.current || loading
+                    ? undefined
+                    : handleBarcode
+                }
+              />
+
+              {/* FRAME QR */}
+              <View style={styles.qrOverlay}>
+                <View style={styles.qrTarget}>
+                  <View style={styles.cornerTopLeft} />
+                  <View style={styles.cornerTopRight} />
+                  <View style={styles.cornerBottomLeft} />
+                  <View style={styles.cornerBottomRight} />
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={styles.cameraPlaceholder}>
+              <Text style={styles.qrSymbol}>
+                ▦
+              </Text>
+
+              <Text style={styles.permissionText}>
+                Aktifkan kamera untuk scan QR
+              </Text>
+            </View>
+          )}
+
+          {/* LOADING SCAN */}
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator
+                size="large"
+                color={COLORS.white}
+              />
+
+              <Text style={styles.loadingText}>
+                Mengambil data topeng...
+              </Text>
+            </View>
+          )}
         </View>
 
-        <Button
-          title="◎   Mulai Scan QR"
-          onPress={() => {
-            setScanned(false);
-            setScanning(true);
-          }}
-          style={{ width: "100%" }}
-        />
+        {/* TOMBOL KAMERA */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.cameraButton,
+            pressed && { opacity: 0.75 },
+          ]}
+          onPress={handleCameraButton}
+          disabled={loading}
+        >
+          <Text style={styles.cameraIcon}>
+            ◎
+          </Text>
+        </Pressable>
+
+        {/* ILUSTRASI BAWAH */}
+        <View style={styles.templeLeft}>
+          <Text style={styles.templeIcon}>♜</Text>
+        </View>
+
+        <View style={styles.templeRight}>
+          <Text style={styles.templeIcon}>♜</Text>
+        </View>
+
+        <View style={styles.cloudBottomLeft} />
+        <View style={styles.cloudBottomRight} />
+
       </View>
-
-      <View style={styles.bottom}>
-        <Text style={styles.bottomTitle}>
-          Kenali Karakter Topengmu
-        </Text>
-
-        <Text style={styles.body}>
-          Tonton video, pelajari deskripsi,
-          lalu ikuti kuis personal karakter.
-        </Text>
-
-        <Button
-          title="Jelajahi Video Topeng  →"
-          secondary
-          onPress={() => router.push("/videos")}
-          style={{ marginTop: 14 }}
-        />
-
-        <Button
-          title="Mulai Kuis Karakter"
-          onPress={() => router.push("/quiz")}
-          style={{ marginTop: 10 }}
-        />
-      </View>
-    </Screen>
+    </View>
   );
 }
 
+// =====================================================
+// STYLE SCAN QR
+// =====================================================
+
 const styles = StyleSheet.create({
-  top: {
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 10,
+    paddingTop: 12,
+  },
+
+  header: {
     alignItems: "center",
-    marginBottom: 18,
-    marginTop: 8
+    paddingTop: 18,
+    paddingBottom: 22,
   },
 
   brand: {
-    fontSize: 15,
-    letterSpacing: 3,
-    color: C.brown,
-    fontWeight: "900"
-  },
-
-  kicker: {
-    fontSize: 9,
-    letterSpacing: 1.5,
-    color: C.muted,
-    marginTop: 5
-  },
-
-  hero: {
-    backgroundColor: C.sand,
-    borderRadius: 24,
-    padding: 22,
-    alignItems: "center",
-    minHeight: 370,
-    justifyContent: "center"
-  },
-
-  heroSmall: {
-    color: C.brown,
-    fontWeight: "800",
-    fontSize: 9,
-    letterSpacing: 1.5
-  },
-
-  heroTitle: {
-    fontSize: 30,
+    color: COLORS.brown,
+    fontSize: 20,
     fontWeight: "900",
-    color: C.dark,
-    marginTop: 8
+    letterSpacing: 3,
   },
 
-  heroDesc: {
-    color: C.dark,
-    textAlign: "center",
-    lineHeight: 20,
-    marginTop: 8,
-    fontSize: 12
+  subtitle: {
+    color: COLORS.muted,
+    fontSize: 10,
+    letterSpacing: 2,
+    marginTop: 7,
   },
 
-  qrIcon: {
-    width: 130,
-    height: 130,
-    backgroundColor: "#3D2B1F",
-    borderRadius: 15,
-    marginVertical: 20,
+  scannerCard: {
+    flex: 1,
+    backgroundColor: COLORS.sand,
     alignItems: "center",
-    justifyContent: "center"
+    borderRadius: 3,
+    paddingTop: 36,
+    paddingHorizontal: 20,
+    overflow: "hidden",
+    position: "relative",
+    marginBottom: 8,
   },
 
-  qrSymbol: {
-    fontSize: 75,
-    color: "white"
-  },
-
-  bottom: {
-    paddingTop: 22
-  },
-
-  bottomTitle: {
-    color: C.dark,
+  smallTitle: {
+    color: COLORS.brown,
+    fontSize: 12,
     fontWeight: "800",
-    fontSize: 19
-  },
-
-  body: {
-    color: C.muted,
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 8
+    letterSpacing: 2,
+    textAlign: "center",
+    marginTop: 5,
   },
 
   title: {
+    color: COLORS.dark,
     fontSize: 24,
-    fontWeight: "800",
-    color: C.dark,
-    marginBottom: 12
+    fontWeight: "900",
+    marginTop: 16,
   },
 
-  cameraPage: {
-    flex: 1,
-    backgroundColor: "black"
+  description: {
+    color: COLORS.dark,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+    maxWidth: 280,
   },
 
-  cameraOverlay: {
-    flex: 1,
-    justifyContent: "space-between",
+  cameraFrame: {
+    width: 206,
+    height: 286,
+    backgroundColor: COLORS.dark,
+    borderRadius: 13,
+    marginTop: 25,
+    overflow: "hidden",
     alignItems: "center",
-    paddingTop: 70,
-    paddingBottom: 55,
-    backgroundColor: "#00000033"
+    justifyContent: "center",
   },
 
-  cameraTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "800"
+  cameraPlaceholder: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: "#2A1E17",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  scanFrame: {
-    width: 250,
-    height: 250,
-    borderWidth: 4,
-    borderColor: "#FFF2D9",
-    borderRadius: 22
+  qrSymbol: {
+    color: COLORS.white,
+    fontSize: 75,
   },
 
-  close: {
-    backgroundColor: C.brown,
-    padding: 15,
-    borderRadius: 12
+  permissionText: {
+    color: COLORS.white,
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 10,
+    paddingHorizontal: 15,
   },
 
-  closeText: {
-    color: "white",
-    fontWeight: "700"
-  }
+  qrOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00000022",
+  },
+
+  qrTarget: {
+    width: 150,
+    height: 150,
+    borderColor: COLORS.white,
+    borderWidth: 2,
+    position: "relative",
+  },
+
+  cornerTopLeft: {
+    position: "absolute",
+    width: 23,
+    height: 23,
+    top: -2,
+    left: -2,
+    borderTopWidth: 5,
+    borderLeftWidth: 5,
+    borderColor: COLORS.white,
+  },
+
+  cornerTopRight: {
+    position: "absolute",
+    width: 23,
+    height: 23,
+    top: -2,
+    right: -2,
+    borderTopWidth: 5,
+    borderRightWidth: 5,
+    borderColor: COLORS.white,
+  },
+
+  cornerBottomLeft: {
+    position: "absolute",
+    width: 23,
+    height: 23,
+    bottom: -2,
+    left: -2,
+    borderBottomWidth: 5,
+    borderLeftWidth: 5,
+    borderColor: COLORS.white,
+  },
+
+  cornerBottomRight: {
+    position: "absolute",
+    width: 23,
+    height: 23,
+    bottom: -2,
+    right: -2,
+    borderBottomWidth: 5,
+    borderRightWidth: 5,
+    borderColor: COLORS.white,
+  },
+
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "#000000AA",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+
+  loadingText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  cameraButton: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: COLORS.brown,
+    borderWidth: 5,
+    borderColor: "#B77A4C",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 25,
+    marginBottom: 100,
+    zIndex: 2,
+    elevation: 5,
+  },
+
+  cameraIcon: {
+    fontSize: 36,
+    color: COLORS.white,
+    fontWeight: "800",
+  },
+
+  cloudLeft: {
+    position: "absolute",
+    top: 8,
+    left: 12,
+    width: 80,
+    height: 15,
+    backgroundColor: "#B77A4C",
+    borderRadius: 30,
+    opacity: 0.8,
+  },
+
+  cloudRight: {
+    position: "absolute",
+    top: 12,
+    right: 10,
+    width: 95,
+    height: 17,
+    backgroundColor: "#B77A4C",
+    borderRadius: 30,
+    opacity: 0.8,
+  },
+
+  templeLeft: {
+    position: "absolute",
+    left: 10,
+    bottom: 30,
+  },
+
+  templeRight: {
+    position: "absolute",
+    right: 10,
+    bottom: 30,
+  },
+
+  templeIcon: {
+    color: "#A16A3E",
+    fontSize: 65,
+    opacity: 0.8,
+  },
+
+  cloudBottomLeft: {
+    position: "absolute",
+    left: -15,
+    bottom: 0,
+    width: 145,
+    height: 25,
+    backgroundColor: "#A16A3E",
+    borderRadius: 50,
+  },
+
+  cloudBottomRight: {
+    position: "absolute",
+    right: -15,
+    bottom: 0,
+    width: 125,
+    height: 25,
+    backgroundColor: "#A16A3E",
+    borderRadius: 50,
+  },
 });

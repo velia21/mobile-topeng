@@ -13,7 +13,8 @@
         {
           "cameraPermission": "Izinkan aplikasi Topeng Malangan menggunakan kamera untuk scan QR Code."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

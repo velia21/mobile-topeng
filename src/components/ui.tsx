@@ -1,29 +1,30 @@
+
 import React from "react";
 
 import {
   Pressable,
+  StyleSheet,
   Text,
   View,
-  StyleSheet,
-  ViewStyle
+  ViewStyle,
 } from "react-native";
 
 export const C = {
-  bg: "#F4E8D9",
+  bg: "#E2B486",
   sand: "#E2B486",
   brown: "#8C4F2D",
-  dark: "#4A2B1B",
-  orange: "#B66B32",
+  dark: "#3D2B1F",
+  orange: "#A65E2D",
   cream: "#FFF8EF",
   muted: "#8C7768",
-  white: "#FFFFFF"
+  white: "#FFFFFF",
 };
 
 export function Button({
   title,
   onPress,
   secondary = false,
-  style
+  style,
 }: {
   title: string;
   onPress: () => void;
@@ -33,16 +34,17 @@ export function Button({
   return (
     <Pressable
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.button,
         secondary && styles.secondary,
-        style
+        style,
+        pressed && styles.pressed,
       ]}
     >
       <Text
         style={[
           styles.buttonText,
-          secondary && styles.secondaryText
+          secondary && styles.secondaryText,
         ]}
       >
         {title}
@@ -52,7 +54,7 @@ export function Button({
 }
 
 export function Screen({
-  children
+  children,
 }: {
   children: React.ReactNode;
 }) {
@@ -67,32 +69,36 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: C.bg,
-    paddingHorizontal: 22,
-    paddingTop: 18
+    paddingHorizontal: 15,
+    paddingTop: 12,
   },
 
   button: {
     backgroundColor: C.brown,
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    borderRadius: 13,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 11,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   },
 
   secondary: {
     backgroundColor: "#EAD2B9",
     borderWidth: 1,
-    borderColor: "#C89B74"
+    borderColor: "#C89B74",
   },
 
   buttonText: {
     color: C.white,
-    fontWeight: "700",
-    fontSize: 14
+    fontWeight: "800",
+    fontSize: 12,
   },
 
   secondaryText: {
-    color: C.dark
-  }
+    color: C.dark,
+  },
+
+  pressed: {
+    opacity: 0.75,
+  },
 });

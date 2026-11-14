@@ -1,109 +1,122 @@
-import React, { useState } from "react";
+
+import { useState } from "react";
 
 import {
-  View,
-  Text,
+  Alert,
   Pressable,
-  StyleSheet,
   ScrollView,
-  Alert
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { router } from "expo-router";
 
-import {
-  Screen,
-  Button,
-  C
-} from "../components/ui";
+import { Button, C, Screen } from "../components/ui";
 
 import { quizQuestions } from "../data/masks";
 
 export default function QuizScreen() {
   const [index, setIndex] = useState(0);
-
   const [answers, setAnswers] = useState<string[]>([]);
 
   const current = quizQuestions[index];
-
   const selected = answers[index];
 
   const choose = (value: string) => {
-    const next = [...answers];
-
-    next[index] = value;
-
-    setAnswers(next);
+    setAnswers((previous) => {
+      const next = [...previous];
+      next[index] = value;
+      return next;
+    });
   };
 
   const nextQuestion = () => {
     if (!selected) {
       Alert.alert(
         "Pilih Jawaban",
-        "Silakan pilih salah satu jawaban terlebih dahulu."
+        "Silakan pilih jawaban terlebih dahulu."
       );
-
       return;
     }
 
     if (index < quizQuestions.length - 1) {
-      setIndex(index + 1);
-
+      setIndex((previous) => previous + 1);
       return;
     }
 
-    const counts: Record<string, number> = {};
+    const counts: Record<string, number> = {
+      bijaksana: 0,
+      berani: 0,
+      lembut: 0,
+      ceria: 0,
+    };
 
-    answers.forEach(answer => {
+    answers.forEach((answer) => {
       counts[answer] = (counts[answer] || 0) + 1;
     });
 
-    const result = Object.keys(counts).sort(
-      (a, b) => counts[b] - counts[a]
-    )[0];
+    const priority = [
+      "bijaksana",
+      "berani",
+      "lembut",
+      "ceria",
+    ];
+
+    const result = priority.reduce((best, current) =>
+      counts[current] > counts[best] ? current : best
+    );
 
     router.replace({
       pathname: "/result",
       params: {
-        type: result || "bijaksana"
-      }
+        type: result,
+      },
     });
   };
 
   return (
     <Screen>
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.back}>
-          ← Kembali
-        </Text>
-      </Pressable>
-
-      <Text style={styles.title}>
-        Kuis Personal Karakter
-      </Text>
-
-      <Text style={styles.progress}>
-        Pertanyaan {index + 1} dari {quizQuestions.length}
-      </Text>
-
-      <View style={styles.progressTrack}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${
-                ((index + 1) / quizQuestions.length) * 100
-              }%`
-            }
-          ]}
-        />
-      </View>
-
       <ScrollView
-        contentContainerStyle={{
-          paddingBottom: 20
-        }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
       >
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.back}
+        >
+          <Text style={styles.backText}>‹</Text>
+        </Pressable>
+
+        <Text style={styles.title}>
+          Kuis Personal Karakter
+        </Text>
+
+        <Text style={styles.progressText}>
+          Pertanyaan {index + 1} dari 5
+        </Text>
+
+        <View style={styles.steps}>
+          {quizQuestions.map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.step,
+                i <= index && styles.stepActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.stepText,
+                  i <= index && styles.stepTextActive,
+                ]}
+              >
+                {i + 1}
+              </Text>
+            </View>
+          ))}
+        </View>
+
         <Text style={styles.question}>
           {current.question}
         </Text>
@@ -113,24 +126,24 @@ export default function QuizScreen() {
 
           return (
             <Pressable
-              key={option.value}
+              key={i}
               onPress={() => choose(option.value)}
               style={[
                 styles.option,
-                active && styles.optionActive
+                active && styles.optionActive,
               ]}
             >
               <View
                 style={[
                   styles.letter,
-                  active && styles.letterActive
+                  active && styles.letterActive,
                 ]}
               >
                 <Text
-                  style={{
-                    color: active ? "white" : C.brown,
-                    fontWeight: "900"
-                  }}
+                  style={[
+                    styles.letterText,
+                    active && styles.letterTextActive,
+                  ]}
                 >
                   {String.fromCharCode(65 + i)}
                 </Text>
@@ -139,7 +152,7 @@ export default function QuizScreen() {
               <Text
                 style={[
                   styles.optionText,
-                  active && { color: "white" }
+                  active && styles.optionTextActive,
                 ]}
               >
                 {option.label}
@@ -147,109 +160,154 @@ export default function QuizScreen() {
             </Pressable>
           );
         })}
+
+        <Button
+          title={
+            index === 4
+              ? "Lihat Hasil   →"
+              : "Lanjut   →"
+          }
+          onPress={nextQuestion}
+          style={styles.nextButton}
+        />
+
+        <Text style={styles.note}>
+          Pilih jawaban yang paling menggambarkan dirimu.
+        </Text>
       </ScrollView>
-
-      <Button
-        title={
-          index === quizQuestions.length - 1
-            ? "Lihat Hasil  →"
-            : "Lanjut  →"
-        }
-        onPress={nextQuestion}
-      />
-
-      <Text style={styles.note}>
-        Pilih satu jawaban untuk melanjutkan.
-      </Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    flexGrow: 1,
+    paddingBottom: 22,
+  },
+
   back: {
-    color: C.brown,
-    fontWeight: "800",
-    marginBottom: 18
+    marginBottom: 5,
+  },
+
+  backText: {
+    color: C.white,
+    fontSize: 27,
+    fontWeight: "700",
   },
 
   title: {
-    color: C.dark,
-    fontSize: 24,
-    fontWeight: "900"
+    fontSize: 16,
+    color: C.white,
+    fontWeight: "900",
+    marginBottom: 15,
   },
 
-  progress: {
-    color: C.muted,
-    fontSize: 12,
-    marginTop: 15,
-    marginBottom: 7
+  progressText: {
+    color: "#765037",
+    fontSize: 11,
+    textAlign: "center",
+    marginBottom: 12,
   },
 
-  progressTrack: {
-    height: 7,
-    borderRadius: 10,
-    backgroundColor: "#E2D0BD",
-    overflow: "hidden"
+  steps: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#EAC9A8",
+    padding: 8,
+    borderRadius: 30,
+    marginBottom: 15,
   },
 
-  progressFill: {
-    height: 7,
-    backgroundColor: C.orange,
-    borderRadius: 10
+  step: {
+    width: 26,
+    height: 26,
+    borderRadius: 15,
+    backgroundColor: C.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  stepActive: {
+    backgroundColor: "#9B572F",
+  },
+
+  stepText: {
+    color: C.brown,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  stepTextActive: {
+    color: C.white,
   },
 
   question: {
-    color: C.dark,
-    fontSize: 19,
+    fontSize: 14,
+    lineHeight: 21,
     fontWeight: "900",
-    lineHeight: 27,
-    marginTop: 28,
-    marginBottom: 20
+    color: C.dark,
+    marginBottom: 18,
   },
 
   option: {
     backgroundColor: C.cream,
-    borderRadius: 13,
-    padding: 13,
+    borderRadius: 10,
+    padding: 11,
+    minHeight: 47,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 11,
-    borderWidth: 1,
-    borderColor: "#E5D5C4",
-    minHeight: 57
+    marginBottom: 9,
   },
 
   optionActive: {
-    backgroundColor: C.orange,
-    borderColor: C.orange
+    backgroundColor: "#A65F32",
   },
 
   letter: {
-    width: 29,
-    height: 29,
-    borderRadius: 20,
+    width: 23,
+    height: 23,
+    borderRadius: 15,
     backgroundColor: "#F0DDC9",
-    alignItems: "center",
     justifyContent: "center",
-    marginRight: 12
+    alignItems: "center",
+    marginRight: 10,
   },
 
   letterActive: {
-    backgroundColor: C.brown
+    backgroundColor: "#7E4325",
+  },
+
+  letterText: {
+    color: C.brown,
+    fontWeight: "900",
+    fontSize: 10,
+  },
+
+  letterTextActive: {
+    color: C.white,
   },
 
   optionText: {
     color: C.dark,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "600",
-    flex: 1
+    flex: 1,
+  },
+
+  optionTextActive: {
+    color: C.white,
+  },
+
+  nextButton: {
+    marginTop: 14,
+    backgroundColor: "#A65E2D",
   },
 
   note: {
-    color: C.muted,
+    color: "#8C654A",
     textAlign: "center",
-    fontSize: 10,
-    marginTop: 8,
-    marginBottom: 8
-  }
+    fontSize: 9,
+    marginTop: 10,
+  },
 });

@@ -1,174 +1,283 @@
-import React from "react";
+
+import { useEffect, useState } from "react";
 
 import {
-  ScrollView,
-  Text,
+  ActivityIndicator,
   Image,
+  Pressable,
+  ScrollView,
   StyleSheet,
-  Pressable
+  Text,
+  View,
 } from "react-native";
 
 import {
+  router,
   useLocalSearchParams,
-  router
 } from "expo-router";
 
-import {
-  useVideoPlayer,
-  VideoView
-} from "expo-video";
+import { Button, C, Screen } from "../../components/ui";
 
-import {
-  Screen,
-  Button,
-  C
-} from "../../components/ui";
-
-import { masks } from "../../data/masks";
+import api, {
+  Topeng,
+  getTopengImage,
+} from "../../services/api";
 
 export default function MaskDetailScreen() {
-  const { id } = useLocalSearchParams<{
-    id: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  const mask =
-    masks.find(item => item.id === id) ?? masks[0];
+  const [topeng, setTopeng] = useState<Topeng | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const player = useVideoPlayer(
-    mask.videoUrl,
-    player => {
-      player.loop = false;
+  useEffect(() => {
+    let active = true;
+
+    async function loadDetail() {
+      try {
+        setLoading(true);
+        setError("");
+
+        if (!id) {
+          throw new Error("ID topeng tidak ditemukan.");
+        }
+
+        const data = await api.getDetailTopeng(id);
+
+        if (active) {
+          setTopeng(data);
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Gagal mengambil deskripsi topeng."
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  );
+
+    loadDetail();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Screen>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={C.brown} />
+          <Text style={styles.muted}>
+            Membuka cerita topeng...
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!topeng || error) {
+    return (
+      <Screen>
+        <View style={styles.center}>
+          <Text style={styles.error}>{error}</Text>
+          <Button
+            title="Kembali"
+            onPress={() => router.back()}
+          />
+        </View>
+      </Screen>
+    );
+  }
+
+  const image = getTopengImage(topeng);
+
+  const story =
+    topeng.topeng_cerita ||
+    topeng.topeng_kisah;
 
   return (
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
       >
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>
-            ← Kembali
-          </Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.back}
+        >
+          <Text style={styles.backText}>‹</Text>
         </Pressable>
 
-        <Text style={styles.heading}>
+        <Text style={styles.header}>
           Deskripsi Topeng
         </Text>
 
-        <Image
-          source={{ uri: mask.image }}
-          style={styles.image}
-        />
+        <View style={styles.portraitContainer}>
+          {image ? (
+            <Image
+              source={{ uri: image }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.muted}>
+                Gambar belum tersedia
+              </Text>
+            </View>
+          )}
+        </View>
 
         <Text style={styles.name}>
-          {mask.name}
+          {topeng.topeng_nama}
         </Text>
 
         <Text style={styles.character}>
-          {mask.character}
+          {topeng.sifat_topeng || "Karakter Topeng Malangan"}
         </Text>
 
-        <Text style={styles.videoTitle}>
-          Video Topeng
-        </Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Deskripsi Topeng
+          </Text>
 
-        <VideoView
-          player={player}
-          style={styles.video}
-          nativeControls
-          contentFit="contain"
-        />
+          <Text style={styles.description}>
+            {topeng.topeng_deskripsi ||
+              "Deskripsi belum tersedia di database."}
+          </Text>
+        </View>
 
-        <Text style={styles.section}>
-          Deskripsi Topeng
-        </Text>
+        <View style={styles.storySection}>
+          <Text style={styles.sectionTitle}>
+            Tahukah Kamu?
+          </Text>
 
-        <Text style={styles.desc}>
-          {mask.description}
-        </Text>
-
-        <Text style={styles.section}>
-          Kisah Karakter
-        </Text>
-
-        <Text style={styles.desc}>
-          {mask.story}
-        </Text>
+          <Text style={styles.description}>
+            {story ||
+              "Informasi kisah khusus topeng ini belum tersedia di database."}
+          </Text>
+        </View>
 
         <Button
-          title="Ikuti Kuis  →"
+          title="Ikuti Kuis   →"
           onPress={() => router.push("/quiz")}
-          style={{
-            marginTop: 22,
-            marginBottom: 28
-          }}
+          style={styles.quizButton}
         />
+
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  back: {
-    color: C.brown,
-    fontWeight: "800",
-    marginBottom: 14
+  content: {
+    paddingBottom: 25,
   },
 
-  heading: {
-    fontSize: 23,
-    color: C.dark,
-    fontWeight: "900",
-    marginBottom: 14
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  back: {
+    width: 30,
+    marginBottom: 5,
+  },
+
+  backText: {
+    color: C.white,
+    fontSize: 27,
+    fontWeight: "700",
+  },
+
+  header: {
+    color: C.white,
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+
+  portraitContainer: {
+    width: 145,
+    height: 145,
+    borderRadius: 80,
+    backgroundColor: "#F6E5D0",
+    alignSelf: "center",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    marginBottom: 12,
+    borderWidth: 6,
+    borderColor: "#F6E5D0",
   },
 
   image: {
     width: "100%",
-    height: 210,
-    borderRadius: 18,
-    backgroundColor: C.sand
+    height: "100%",
+  },
+
+  imagePlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   name: {
-    fontSize: 22,
-    color: C.dark,
+    fontSize: 21,
     fontWeight: "900",
-    marginTop: 15
+    color: C.dark,
   },
 
   character: {
-    color: C.orange,
+    fontSize: 11,
+    color: C.brown,
+    marginTop: 4,
     fontWeight: "700",
-    marginTop: 4
-  },
-
-  videoTitle: {
-    fontSize: 17,
-    color: C.dark,
-    fontWeight: "900",
-    marginTop: 22,
-    marginBottom: 10
-  },
-
-  video: {
-    width: "100%",
-    height: 205,
-    borderRadius: 16,
-    backgroundColor: "#1F1A17"
   },
 
   section: {
-    fontSize: 16,
-    color: C.dark,
-    fontWeight: "900",
-    marginTop: 20,
-    marginBottom: 7
+    marginTop: 13,
   },
 
-  desc: {
-    color: "#654B3A",
-    lineHeight: 21,
-    fontSize: 13
-  }
+  sectionTitle: {
+    fontSize: 13,
+    color: C.dark,
+    fontWeight: "900",
+    marginBottom: 5,
+  },
+
+  description: {
+    fontSize: 11,
+    color: "#563D2D",
+    lineHeight: 17,
+  },
+
+  storySection: {
+    backgroundColor: "#F4D9BB",
+    padding: 13,
+    borderRadius: 12,
+    marginTop: 15,
+  },
+
+  quizButton: {
+    marginTop: 18,
+    backgroundColor: "#A65E2D",
+  },
+
+  muted: {
+    color: C.muted,
+  },
+
+  error: {
+    color: C.brown,
+    textAlign: "center",
+  },
 });

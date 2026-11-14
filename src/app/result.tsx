@@ -1,46 +1,78 @@
 
+import { useEffect, useState } from "react";
+
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import {
-    router,
-    useLocalSearchParams
+  router,
+  useLocalSearchParams,
 } from "expo-router";
 
-import * as Linking from "expo-linking";
+import { Button, C, Screen } from "../components/ui";
 
 import {
-    Button,
-    C,
-    Screen
-} from "../components/ui";
-
-import {
-    characterResults,
-    masks
+  characterResults,
+  QuizType,
 } from "../data/masks";
 
-// GANTI DENGAN URL WEBSITE E-COMMERCE ASLI
-const ECOMMERCE_URL =
-  "https://contoh-toko-topeng.com";
+import api, {
+  ECOMMERCE_URL,
+  getTopengImage,
+  Topeng,
+} from "../services/api";
 
 export default function ResultScreen() {
-  const { type } = useLocalSearchParams<{
-    type: string;
-  }>();
+  const { type } = useLocalSearchParams<{ type: string }>();
 
-  const result =
-    characterResults[type || "bijaksana"] ||
-    characterResults.bijaksana;
+  const resultKey = (
+    Object.keys(characterResults).includes(type || "")
+      ? type
+      : "bijaksana"
+  ) as QuizType;
 
-  const mask =
-    masks.find(item => item.id === result.maskId) ||
-    masks[0];
+  const result = characterResults[resultKey];
+
+  const [topeng, setTopeng] = useState<Topeng | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadTopeng() {
+      try {
+        const data = await api.getTopeng();
+
+        const found = data.find((item) =>
+          item.topeng_nama
+            .toLowerCase()
+            .includes(result.keyword.toLowerCase())
+        );
+
+        if (active) {
+          setTopeng(found || null);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil topeng hasil:", error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadTopeng();
+
+    return () => {
+      active = false;
+    };
+  }, [result.keyword]);
 
   const openShop = async () => {
     try {
@@ -48,10 +80,12 @@ export default function ResultScreen() {
     } catch {
       Alert.alert(
         "Website Tidak Dapat Dibuka",
-        "Periksa kembali URL website e-commerce."
+        "Periksa alamat website E-Commerce dan koneksi internet."
       );
     }
   };
+
+  const image = topeng ? getTopengImage(topeng) : null;
 
   return (
     <Screen>
@@ -60,25 +94,36 @@ export default function ResultScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.complete}>
-          ✦ KUIS SELESAI! ✦
+          Kuis Selesai!
         </Text>
 
-        <Image
-          source={{ uri: mask.image }}
-          style={styles.image}
-        />
+        {loading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={C.brown} />
+          </View>
+        ) : image ? (
+          <Image
+            source={{ uri: image }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.placeholderText}>
+              Gambar karakter belum tersedia
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.small}>
           HASIL PERJALANANMU
         </Text>
 
-        <Text style={styles.name}>
-          Kamu adalah {result.name}
-        </Text>
-
-        <Text style={styles.tagline}>
-          {result.tagline}
-        </Text>
+        <View style={styles.resultCard}>
+          <Text style={styles.name}>
+            Kamu adalah {result.name}
+          </Text>
+        </View>
 
         <Text style={styles.description}>
           {result.description}
@@ -92,117 +137,139 @@ export default function ResultScreen() {
           <Text style={styles.tipText}>
             Temukan koleksi topeng, informasi produk,
             dan berbagai pilihan pembelian melalui
-            website e-commerce Topeng Malangan.
+            website E-Commerce Topeng Malangan.
           </Text>
         </View>
 
         <Button
-          title="Kunjungi Website E-Commerce"
+          title="Masuk ke Halaman E-Commerce"
           onPress={openShop}
-          style={{
-            width: "100%",
-            marginTop: 18
-          }}
+          style={styles.shopButton}
         />
 
         <Button
-          title="↻  Coba Lagi"
+          title="↻   Coba Lagi"
           secondary
           onPress={() => router.replace("/quiz")}
-          style={{
-            width: "100%",
-            marginTop: 10
-          }}
+          style={styles.secondaryButton}
         />
 
         <Button
-          title="⌂  Kembali ke Beranda"
+          title="⌂   Kembali ke Kamera"
           secondary
           onPress={() => router.replace("/")}
-          style={{
-            width: "100%",
-            marginTop: 10
-          }}
+          style={styles.secondaryButton}
         />
       </ScrollView>
     </Screen>
   );
 }
 
-import { View } from "react-native";
-
 const styles = StyleSheet.create({
   content: {
+    flexGrow: 1,
     alignItems: "center",
     paddingBottom: 30,
-    paddingTop: 8
+    paddingTop: 5,
   },
 
   complete: {
-    color: C.brown,
+    color: C.white,
+    fontSize: 17,
     fontWeight: "900",
-    letterSpacing: 1.5,
-    fontSize: 14,
-    marginBottom: 18
+    marginBottom: 15,
   },
 
   image: {
-    width: 175,
-    height: 175,
-    borderRadius: 90,
-    borderWidth: 7,
-    borderColor: "#E4C29F",
-    backgroundColor: C.sand
+    width: 135,
+    height: 135,
+    borderRadius: 75,
+    borderWidth: 6,
+    borderColor: "#E9C5A1",
+    backgroundColor: C.sand,
+  },
+
+  imagePlaceholder: {
+    width: 135,
+    height: 135,
+    borderRadius: 75,
+    backgroundColor: "#D9AF88",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 15,
+  },
+
+  placeholderText: {
+    fontSize: 10,
+    textAlign: "center",
+    color: C.dark,
+  },
+
+  loading: {
+    height: 135,
+    justifyContent: "center",
   },
 
   small: {
-    color: C.muted,
+    color: "#8A6347",
     fontSize: 10,
+    marginTop: 17,
     fontWeight: "800",
-    letterSpacing: 1.5,
-    marginTop: 20
+  },
+
+  resultCard: {
+    backgroundColor: "#87502F",
+    borderRadius: 12,
+    width: "90%",
+    padding: 14,
+    marginTop: 12,
   },
 
   name: {
-    color: C.dark,
-    fontSize: 23,
+    color: C.white,
+    fontSize: 17,
     fontWeight: "900",
     textAlign: "center",
-    marginTop: 8
-  },
-
-  tagline: {
-    color: C.orange,
-    fontWeight: "800",
-    marginTop: 6
   },
 
   description: {
-    color: "#6D5544",
+    color: "#76533D",
     textAlign: "center",
-    lineHeight: 21,
-    fontSize: 13,
-    marginTop: 14
+    lineHeight: 18,
+    fontSize: 11,
+    marginTop: 14,
   },
 
   tip: {
-    backgroundColor: "#E7C7A5",
-    borderRadius: 15,
-    padding: 16,
+    backgroundColor: "#F0D4B4",
+    borderRadius: 12,
+    padding: 13,
     width: "100%",
-    marginTop: 18
+    marginTop: 16,
   },
 
   tipTitle: {
     color: C.dark,
     fontWeight: "900",
-    fontSize: 14
+    fontSize: 12,
   },
 
   tipText: {
     color: "#654B3A",
-    lineHeight: 19,
-    fontSize: 12,
-    marginTop: 6
-  }
+    lineHeight: 17,
+    fontSize: 10,
+    marginTop: 6,
+  },
+
+  shopButton: {
+    width: "100%",
+    marginTop: 18,
+    backgroundColor: "#87502F",
+  },
+
+  secondaryButton: {
+    width: "100%",
+    marginTop: 10,
+    backgroundColor: "#A66B40",
+  },
 });
