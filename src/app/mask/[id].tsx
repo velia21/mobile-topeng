@@ -1,6 +1,4 @@
-
 import { useEffect, useState } from "react";
-
 import {
   ActivityIndicator,
   Image,
@@ -10,14 +8,11 @@ import {
   Text,
   View,
 } from "react-native";
-
 import {
   router,
   useLocalSearchParams,
 } from "expo-router";
-
 import { Button, C, Screen } from "../../components/ui";
-
 import api, {
   Topeng,
   getTopengImage,
@@ -96,188 +91,252 @@ export default function MaskDetailScreen() {
 
   const image = getTopengImage(topeng);
 
-  const story =
-    topeng.topeng_cerita ||
-    topeng.topeng_kisah;
-
   return (
     <Screen>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.back}
-        >
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
-
-        <Text style={styles.header}>
-          Deskripsi Topeng
-        </Text>
-
-        <View style={styles.portraitContainer}>
-          {image ? (
-            <Image
-              source={{ uri: image }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Text style={styles.muted}>
-                Gambar belum tersedia
+      <View style={styles.container}>
+        {/* Header Wrapper */}
+        <View style={styles.headerWrapper}>
+          <View style={styles.topHeader}>
+            <View style={styles.mountainLeft} />
+            <View style={styles.mountainRight} />
+            
+            <View style={styles.headerBar}>
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.backButton}
+              >
+                <Text style={styles.backText}>←</Text>
+              </Pressable>
+              <Text style={styles.headerTitle}>
+                Deskripsi Topeng
               </Text>
+              <View style={{ width: 36 }} />
             </View>
-          )}
+          </View>
+
+          {/* Container Gambar Bulat */}
+          <View style={styles.portraitContainer}>
+            {image ? (
+              <Image
+                source={{ uri: image }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.muted}>
+                  Gambar belum tersedia
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        <Text style={styles.name}>
-          {topeng.topeng_nama}
-        </Text>
+        {/* Konten Utama */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.bodyContent}>
+            <Text style={styles.name}>
+              {topeng.topeng_nama}
+            </Text>
 
-        <Text style={styles.character}>
-          {topeng.sifat_topeng || "Karakter Topeng Malangan"}
-        </Text>
+            <Text style={styles.description}>
+              {topeng.topeng_deskripsi ||
+                "Deskripsi belum tersedia di database."}
+            </Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Deskripsi Topeng
-          </Text>
+            <Button
+              title="Ikuti Kuis    →"
+              onPress={() => router.push("/quiz")}
+              style={styles.quizButton}
+            />
+          </View>
+        </ScrollView>
 
-          <Text style={styles.description}>
-            {topeng.topeng_deskripsi ||
-              "Deskripsi belum tersedia di database."}
-          </Text>
+        {/* Ornamen Siluet Bukit di Sudut Bawah */}
+        <View style={styles.bottomMountainsContainer} pointerEvents="none">
+          <View style={styles.bottomMountainLeft} />
+          <View style={styles.bottomMountainRight} />
         </View>
-
-        <View style={styles.storySection}>
-          <Text style={styles.sectionTitle}>
-            Tahukah Kamu?
-          </Text>
-
-          <Text style={styles.description}>
-            {story ||
-              "Informasi kisah khusus topeng ini belum tersedia di database."}
-          </Text>
-        </View>
-
-        <Button
-          title="Ikuti Kuis   →"
-          onPress={() => router.push("/quiz")}
-          style={styles.quizButton}
-        />
-
-      </ScrollView>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 25,
+  container: {
+    flex: 1,
+    backgroundColor: "#F5EBE0",
   },
-
+  headerWrapper: {
+    position: "relative",
+    alignItems: "center",
+    marginBottom: 95,
+  },
+  topHeader: {
+    backgroundColor: "#6B3E26",
+    width: "100%",
+    height: 190,
+    paddingTop: 12,
+    overflow: "hidden",
+    position: "relative",
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+  },
+  backText: {
+    color: "#FFFFFF",
+    fontSize: 28,
+    fontWeight: "900",
+  },
+  headerTitle: {
+    color: "#FFFFFF",
+    fontSize: 20, // Diperbesar dari 18
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  mountainLeft: {
+    position: "absolute",
+    left: -20,
+    top: 45,
+    width: 130,
+    height: 150,
+    backgroundColor: "#54301C",
+    transform: [{ rotate: "25deg" }],
+    opacity: 0.6,
+    borderTopLeftRadius: 20,
+  },
+  mountainRight: {
+    position: "absolute",
+    right: -20,
+    top: 35,
+    width: 140,
+    height: 160,
+    backgroundColor: "#54301C",
+    transform: [{ rotate: "-25deg" }],
+    opacity: 0.6,
+    borderTopRightRadius: 20,
+  },
+  portraitContainer: {
+    position: "absolute",
+    bottom: -90,
+    width: 170, // Diperbesar dari 160
+    height: 170, // Diperbesar dari 160
+    borderRadius: 85,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    borderWidth: 5,
+    borderColor: "#F5EBE0",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    zIndex: 20,
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  imagePlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 10,
+  },
+  scrollContent: {
+    paddingBottom: 80,
+    alignItems: "center",
+  },
+  bodyContent: {
+    width: "88%",
+    alignItems: "flex-start",
+  },
+  name: {
+    fontSize: 30, // Diperbesar dari 26
+    fontWeight: "900",
+    color: "#2C1810",
+    marginBottom: 16,
+    textAlign: "left",
+    letterSpacing: 0.5,
+  },
+  description: {
+    fontSize: 17, // Diperbesar dari 15
+    color: "#4A3224",
+    lineHeight: 28, // Diperbesar agar lebih longgar dan mudah dibaca
+    textAlign: "left",
+    marginBottom: 32,
+    fontWeight: "650" as any, // Ketebalan ditingkatkan
+  },
+  quizButton: {
+    width: "100%",
+    backgroundColor: "#A65E2D",
+    borderRadius: 14,
+    paddingVertical: 18,
+  },
+  bottomMountainsContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    overflow: "hidden",
+  },
+  bottomMountainLeft: {
+    position: "absolute",
+    bottom: -35,
+    left: -30,
+    width: 100,
+    height: 80,
+    backgroundColor: "#E2D3C1",
+    transform: [{ rotate: "35deg" }],
+    borderTopLeftRadius: 40,
+    opacity: 0.9,
+  },
+  bottomMountainRight: {
+    position: "absolute",
+    bottom: -35,
+    right: -30,
+    width: 100,
+    height: 80,
+    backgroundColor: "#E2D3C1",
+    transform: [{ rotate: "-35deg" }],
+    borderTopRightRadius: 40,
+    opacity: 0.9,
+  },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
+    padding: 20,
   },
-
-  back: {
-    width: 30,
-    marginBottom: 5,
-  },
-
-  backText: {
-    color: C.white,
-    fontSize: 27,
-    fontWeight: "700",
-  },
-
-  header: {
-    color: C.white,
-    fontSize: 16,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 15,
-  },
-
-  portraitContainer: {
-    width: 145,
-    height: 145,
-    borderRadius: 80,
-    backgroundColor: "#F6E5D0",
-    alignSelf: "center",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    marginBottom: 12,
-    borderWidth: 6,
-    borderColor: "#F6E5D0",
-  },
-
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-
-  imagePlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  name: {
-    fontSize: 21,
-    fontWeight: "900",
-    color: C.dark,
-  },
-
-  character: {
-    fontSize: 11,
-    color: C.brown,
-    marginTop: 4,
-    fontWeight: "700",
-  },
-
-  section: {
-    marginTop: 13,
-  },
-
-  sectionTitle: {
-    fontSize: 13,
-    color: C.dark,
-    fontWeight: "900",
-    marginBottom: 5,
-  },
-
-  description: {
-    fontSize: 11,
-    color: "#563D2D",
-    lineHeight: 17,
-  },
-
-  storySection: {
-    backgroundColor: "#F4D9BB",
-    padding: 13,
-    borderRadius: 12,
-    marginTop: 15,
-  },
-
-  quizButton: {
-    marginTop: 18,
-    backgroundColor: "#A65E2D",
-  },
-
   muted: {
-    color: C.muted,
+    color: "#76533D",
+    fontSize: 16, // Diperbesar
+    fontWeight: "700",
+    textAlign: "center",
   },
-
   error: {
-    color: C.brown,
+    color: "#87502F",
+    fontSize: 17, // Diperbesar
+    fontWeight: "800",
     textAlign: "center",
   },
 });

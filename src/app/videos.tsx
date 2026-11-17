@@ -1,20 +1,18 @@
-
 import { router, useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
-import { Button, C, Screen } from "../components/ui";
+import { C, Screen } from "../components/ui";
 import api, {
   Topeng,
-  getTopengImage,
   getVideoUrl,
 } from "../services/api";
 
@@ -142,18 +140,25 @@ export default function VideosScreen() {
             {error || "Data topeng tidak ditemukan."}
           </Text>
 
-          <Button
-            title="Kembali"
+          <Pressable
             onPress={() => router.back()}
-            style={styles.backButton}
-          />
+            style={({ pressed }) => [
+              styles.customButton,
+              styles.readButtonBg,
+              { width: "100%", marginTop: 20 },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text style={styles.customButtonText}>Kembali</Text>
+          </Pressable>
         </View>
       </Screen>
     );
   }
 
-  // Ambil gambar setelah data topeng tersedia
-  const imageUrl = getTopengImage(topeng);
+  // Membuat ringkasan deskripsi (pendek/poin penting saja)
+  const rawDesc = topeng.topeng_deskripsi || "Belum ada deskripsi untuk topeng ini.";
+  const shortDescription = rawDesc.length > 130 ? rawDesc.substring(0, 130) + "..." : rawDesc;
 
   return (
     <Screen>
@@ -180,60 +185,60 @@ export default function VideosScreen() {
           />
         </View>
 
-        {/* INFORMASI TOPENG */}
+        {/* INFORMASI TOPENG (RINGKASAN) */}
         <View style={styles.infoContainer}>
           <Text style={styles.topengName}>
             {topeng.topeng_nama}
           </Text>
 
           <Text style={styles.description}>
-            {topeng.topeng_deskripsi ||
-              "Belum ada deskripsi untuk topeng ini."}
+            {shortDescription}
           </Text>
-
-          {/* GAMBAR TOPENG */}
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.topengImage}
-              resizeMode="cover"
-            />
-          ) : null}
         </View>
 
-        {/* TOMBOL NAVIGASI */}
+        {/* TOMBOL NAVIGASI DENGAN FONT & UKURAN DIPERBESAR */}
         <View style={styles.buttonContainer}>
-          <View style={styles.buttonItem}>
-            <Button
-              title="Lanjut Baca"
-              onPress={() =>
-                router.push(
-                  `/mask/${topeng.topeng_id}` as any
-                )
-              }
-              style={styles.readButton}
-            />
-          </View>
+          <Pressable
+            onPress={() =>
+              router.push(
+                `/mask/${topeng.topeng_id}` as any
+              )
+            }
+            style={({ pressed }) => [
+              styles.customButton,
+              styles.readButtonBg,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text style={styles.customButtonText}>
+              📖  Lanjut Baca
+            </Text>
+          </Pressable>
 
-          <View style={styles.buttonItem}>
-            <Button
-              title="Ikuti Kuis"
-              onPress={() =>
-                router.push({
-                  pathname: "/quiz",
-                  params: {
-                    id: String(topeng.topeng_id),
-                  },
-                } as any)
-              }
-              style={styles.quizButton}
-            />
-          </View>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/quiz",
+                params: {
+                  id: String(topeng.topeng_id),
+                },
+              } as any)
+            }
+            style={({ pressed }) => [
+              styles.customButton,
+              styles.quizButtonBg,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text style={styles.customButtonText}>
+              ✨  Ikuti Kuis
+            </Text>
+          </Pressable>
         </View>
 
         {/* FOOTER */}
         <Text style={styles.footerText}>
-          Kenali lebih dalam budaya dan karakter Topeng Malangan.
+          KENALI LEBIH DALAM BUDAYA DAN KARAKTER TOPENG MALANGAN.
         </Text>
       </ScrollView>
     </Screen>
@@ -243,7 +248,7 @@ export default function VideosScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingBottom: 35,
+    paddingBottom: 40,
   },
 
   center: {
@@ -254,23 +259,25 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    fontSize: 23,
-    fontWeight: "bold",
+    fontSize: 30,
+    fontWeight: "900",
     color: C.dark,
   },
 
   subtitle: {
-    fontSize: 14,
+    fontSize: 17,
     color: C.muted,
-    marginTop: 6,
+    marginTop: 8,
     marginBottom: 20,
-    lineHeight: 21,
+    lineHeight: 25,
+    fontWeight: "600",
   },
 
   loadingText: {
-    marginTop: 12,
+    marginTop: 14,
     color: C.brown,
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: "700",
   },
 
   videoContainer: {
@@ -289,28 +296,21 @@ const styles = StyleSheet.create({
   },
 
   infoContainer: {
-    marginTop: 22,
+    marginTop: 24,
   },
 
   topengName: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontWeight: "900",
     color: C.dark,
-    marginBottom: 9,
+    marginBottom: 10,
   },
 
   description: {
-    fontSize: 14,
-    lineHeight: 23,
+    fontSize: 17,
+    lineHeight: 27,
     color: C.brown,
-  },
-
-  topengImage: {
-    width: "100%",
-    height: 190,
-    borderRadius: 15,
-    marginTop: 18,
-    backgroundColor: C.sand,
+    fontWeight: "600",
   },
 
   buttonContainer: {
@@ -318,45 +318,62 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    marginTop: 24,
+    marginTop: 28,
   },
 
-  buttonItem: {
+  customButton: {
     flex: 1,
+    borderRadius: 14,
+    paddingVertical: 18, // Diperbesar dari 14 agar tombol lebih tinggi dan mantap
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
 
-  readButton: {
+  readButtonBg: {
     backgroundColor: C.orange,
   },
 
-  quizButton: {
+  quizButtonBg: {
     backgroundColor: C.brown,
   },
 
-  backButton: {
-    marginTop: 20,
-    backgroundColor: C.orange,
+  customButtonText: {
+    color: "#FFFFFF",
+    fontSize: 17, // Diperbesar agar teks lebih jelas dan menonjol
+    fontWeight: "900", // Ekstra tebal
+    textAlign: "center",
+    letterSpacing: 0.5,
   },
 
   errorTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 26,
+    fontWeight: "900",
     color: C.dark,
-    marginBottom: 8,
+    marginBottom: 10,
+    textAlign: "center",
   },
 
   errorText: {
-    fontSize: 14,
+    fontSize: 17,
     color: C.muted,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 25,
+    fontWeight: "600",
   },
 
   footerText: {
     textAlign: "center",
-    fontSize: 12,
-    color: C.muted,
-    marginTop: 18,
-    lineHeight: 19,
+    fontSize: 15,
+    fontWeight: "900",
+    color: C.brown,
+    marginTop: 28,
+    lineHeight: 22,
+    letterSpacing: 1.2,
   },
 });

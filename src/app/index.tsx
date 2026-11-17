@@ -1,28 +1,10 @@
-
 import { useEffect, useRef, useState } from "react";
-
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-
-import {
-  CameraView,
-  useCameraPermissions,
-} from "expo-camera";
-
+import { ActivityIndicator, Alert, StatusBar, StyleSheet, Text, View } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { router } from "expo-router";
-
 import api from "../services/api";
 
-// =====================================================
 // WARNA FIGMA
-// =====================================================
 
 const COLORS = {
   background: "#F4E8D9",
@@ -34,9 +16,7 @@ const COLORS = {
   muted: "#8C7768",
 };
 
-// =====================================================
 // MENGAMBIL ID TOPENG DARI QR CODE
-// =====================================================
 
 function getTopengIdFromQR(value: string): string | null {
   const cleanValue = value.trim();
@@ -69,22 +49,17 @@ function getTopengIdFromQR(value: string): string | null {
   return null;
 }
 
-// =====================================================
 // HALAMAN UTAMA SCAN TOPENG
-// =====================================================
 
 export default function HomeScreen() {
   const [permission, requestPermission] =
     useCameraPermissions();
 
   const [loading, setLoading] = useState(false);
-  const [torch, setTorch] = useState(false);
 
   const scannedRef = useRef(false);
 
-  // ===================================================
   // IZIN KAMERA
-  // ===================================================
 
   useEffect(() => {
     if (
@@ -96,9 +71,7 @@ export default function HomeScreen() {
     }
   }, [permission?.granted]);
 
-  // ===================================================
   // PROSES SCAN QR
-  // ===================================================
 
   const handleBarcode = async ({
     data,
@@ -134,16 +107,14 @@ export default function HomeScreen() {
 
       console.log("Data topeng Laravel:", topeng);
 
-      // Membuka halaman detail topeng
-      // Membuka halaman detail topeng
-// Membuka halaman Video Topeng.
-// ID topeng hasil QR tetap dibawa ke halaman berikutnya.
-router.push({
-  pathname: "/videos",
-  params: {
-    id: String(topeng.topeng_id),
-  },
-} as any);
+      // Membuka halaman Video Topeng.
+      // ID topeng hasil QR tetap dibawa ke halaman berikutnya.
+      router.push({
+        pathname: "/videos",
+        params: {
+          id: String(topeng.topeng_id),
+        },
+      } as any);
 
     } catch (error) {
       console.error("Gagal scan QR:", error);
@@ -174,27 +145,6 @@ router.push({
     } finally {
       setLoading(false);
     }
-  };
-
-  // ===================================================
-  // TOMBOL KAMERA / FLASH
-  // ===================================================
-
-  const handleCameraButton = async () => {
-    if (!permission?.granted) {
-      const result = await requestPermission();
-
-      if (!result.granted) {
-        Alert.alert(
-          "Izin Kamera",
-          "Izinkan aplikasi menggunakan kamera untuk memindai QR Code."
-        );
-      }
-
-      return;
-    }
-
-    setTorch((previous) => !previous);
   };
 
   // ===================================================
@@ -243,7 +193,6 @@ router.push({
               <CameraView
                 style={StyleSheet.absoluteFill}
                 facing="back"
-                enableTorch={torch}
                 barcodeScannerSettings={{
                   barcodeTypes: ["qr"],
                 }}
@@ -291,20 +240,6 @@ router.push({
           )}
         </View>
 
-        {/* TOMBOL KAMERA */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.cameraButton,
-            pressed && { opacity: 0.75 },
-          ]}
-          onPress={handleCameraButton}
-          disabled={loading}
-        >
-          <Text style={styles.cameraIcon}>
-            ◎
-          </Text>
-        </Pressable>
-
         {/* ILUSTRASI BAWAH */}
         <View style={styles.templeLeft}>
           <Text style={styles.templeIcon}>♜</Text>
@@ -323,7 +258,7 @@ router.push({
 }
 
 // =====================================================
-// STYLE SCAN QR
+// STYLE SCAN QR (Ukuran Font Telah Disesuaikan)
 // =====================================================
 
 const styles = StyleSheet.create({
@@ -342,16 +277,16 @@ const styles = StyleSheet.create({
 
   brand: {
     color: COLORS.brown,
-    fontSize: 20,
+    fontSize: 16, // Disesuaikan dari 20
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 2.5,
   },
 
   subtitle: {
     color: COLORS.muted,
-    fontSize: 10,
-    letterSpacing: 2,
-    marginTop: 7,
+    fontSize: 9, // Disesuaikan dari 10
+    letterSpacing: 1.5,
+    marginTop: 6,
   },
 
   scannerCard: {
@@ -361,6 +296,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     paddingTop: 36,
     paddingHorizontal: 20,
+    paddingBottom: 40,
     overflow: "hidden",
     position: "relative",
     marginBottom: 8,
@@ -368,35 +304,35 @@ const styles = StyleSheet.create({
 
   smallTitle: {
     color: COLORS.brown,
-    fontSize: 12,
+    fontSize: 10, // Disesuaikan dari 12
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     textAlign: "center",
     marginTop: 5,
   },
 
   title: {
     color: COLORS.dark,
-    fontSize: 24,
+    fontSize: 20, // Disesuaikan dari 24
     fontWeight: "900",
-    marginTop: 16,
+    marginTop: 14,
   },
 
   description: {
     color: COLORS.dark,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 12, // Disesuaikan dari 13
+    lineHeight: 18,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 6,
     maxWidth: 280,
   },
 
   cameraFrame: {
     width: 206,
-    height: 286,
+    height: 260, // Sedikit disesuaikan agar pas
     backgroundColor: COLORS.dark,
     borderRadius: 13,
-    marginTop: 25,
+    marginTop: 20,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -412,14 +348,14 @@ const styles = StyleSheet.create({
 
   qrSymbol: {
     color: COLORS.white,
-    fontSize: 75,
+    fontSize: 65, // Disesuaikan dari 75
   },
 
   permissionText: {
     color: COLORS.white,
-    fontSize: 11,
+    fontSize: 10, // Disesuaikan dari 11
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 8,
     paddingHorizontal: 15,
   },
 
@@ -431,8 +367,8 @@ const styles = StyleSheet.create({
   },
 
   qrTarget: {
-    width: 150,
-    height: 150,
+    width: 140,
+    height: 140,
     borderColor: COLORS.white,
     borderWidth: 2,
     position: "relative",
@@ -440,45 +376,45 @@ const styles = StyleSheet.create({
 
   cornerTopLeft: {
     position: "absolute",
-    width: 23,
-    height: 23,
+    width: 20,
+    height: 20,
     top: -2,
     left: -2,
-    borderTopWidth: 5,
-    borderLeftWidth: 5,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
     borderColor: COLORS.white,
   },
 
   cornerTopRight: {
     position: "absolute",
-    width: 23,
-    height: 23,
+    width: 20,
+    height: 20,
     top: -2,
     right: -2,
-    borderTopWidth: 5,
-    borderRightWidth: 5,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
     borderColor: COLORS.white,
   },
 
   cornerBottomLeft: {
     position: "absolute",
-    width: 23,
-    height: 23,
+    width: 20,
+    height: 20,
     bottom: -2,
     left: -2,
-    borderBottomWidth: 5,
-    borderLeftWidth: 5,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
     borderColor: COLORS.white,
   },
 
   cornerBottomRight: {
     position: "absolute",
-    width: 23,
-    height: 23,
+    width: 20,
+    height: 20,
     bottom: -2,
     right: -2,
-    borderBottomWidth: 5,
-    borderRightWidth: 5,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
     borderColor: COLORS.white,
   },
 
@@ -487,34 +423,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000AA",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
+    gap: 10,
   },
 
   loadingText: {
     color: COLORS.white,
-    fontSize: 12,
+    fontSize: 11, // Disesuaikan dari 12
     fontWeight: "700",
-  },
-
-  cameraButton: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: COLORS.brown,
-    borderWidth: 5,
-    borderColor: "#B77A4C",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 25,
-    marginBottom: 100,
-    zIndex: 2,
-    elevation: 5,
-  },
-
-  cameraIcon: {
-    fontSize: 36,
-    color: COLORS.white,
-    fontWeight: "800",
   },
 
   cloudLeft: {
@@ -553,7 +468,7 @@ const styles = StyleSheet.create({
 
   templeIcon: {
     color: "#A16A3E",
-    fontSize: 65,
+    fontSize: 55, // Disesuaikan dari 65
     opacity: 0.8,
   },
 
