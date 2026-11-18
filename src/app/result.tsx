@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { C, Screen } from "../components/ui";
 import api, {
   BASE_URL,
@@ -19,30 +19,15 @@ import api, {
 } from "../services/api";
 
 // URL E-Commerce dengan port 5173 sesuai permintaan
-const ECOMMERCE_URL = "http://10.242.26.172:5173";
-
-// Nama kelompok (bukan tokoh tunggal) yang tidak ikut digacha
-const EXCLUDED_NAMES = ["Sabrang", "Punakawan", "Prabu Klana"];
-
-const getId = (t: any) => String(t?.topeng_id ?? t?.id ?? "");
-
-// Disimpan di level modul supaya tetap ada saat user menekan "Coba Kuis Lagi"
-// (layar hasil dibuat ulang, tapi variabel ini tidak ikut reset)
-let lastResultId: string | null = null;
-
-// Pilih satu topeng acak, tapi bukan hasil kuis sebelumnya
-const pickRandom = (list: Topeng[]) => {
-  if (list.length === 0) return null;
-  const pool =
-    lastResultId && list.length > 1
-      ? list.filter((t) => getId(t) !== lastResultId)
-      : list;
-  const picked = pool[Math.floor(Math.random() * pool.length)] || null;
-  if (picked) lastResultId = getId(picked);
-  return picked;
-};
+const ECOMMERCE_URL = "https://web-e-commerce-eight.vercel.app";
 
 export default function ResultScreen() {
+  const { topeng_id, type } = useLocalSearchParams<{
+    topeng_id?: string;
+    type?: string;
+  }>();
+  const resultId = topeng_id || type;
+
   const [topeng, setTopeng] = useState<Topeng | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,28 +39,20 @@ export default function ResultScreen() {
       try {
         setLoading(true);
         setError("");
-        const response = await api.getTopeng();
 
-        const rawList: Topeng[] = Array.isArray(response)
-          ? response
-          : (response as any)?.data || (response as any)?.topeng || [];
-
-        // Buang kelompok (Sabrang, Punakawan, dll) dari pool gacha
-        const pool = rawList.filter(
-          (t: any) => !EXCLUDED_NAMES.includes(t?.topeng_nama)
-        );
-
-        if (!active) return;
-
-        if (pool.length === 0) {
-          setError("Data topeng belum tersedia.");
-          return;
+        if (!resultId) {
+          throw new Error(
+            "Hasil kuis tidak ditemukan. Silakan ikuti kuis kembali."
+          );
         }
 
-        setTopeng(pickRandom(pool)); // gacha tiap layar hasil dibuka
-      } catch (e) {
+        const detail = await api.getDetailTopeng(resultId);
+        if (active) setTopeng(detail);
+      } catch (e: any) {
         console.error("Gagal mengambil topeng hasil kuis:", e);
-        if (active) setError("Gagal memuat hasil kuis.");
+        if (active) {
+          setError(e?.message || "Gagal memuat hasil kuis.");
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -86,7 +63,7 @@ export default function ResultScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [resultId]);
 
   const openShop = async () => {
     try {

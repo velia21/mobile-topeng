@@ -21,6 +21,7 @@ export default function QuizScreen() {
 
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -57,11 +58,14 @@ export default function QuizScreen() {
                       opt.label ||
                       "Pilihan jawaban";
 
-                    // Ambil ID topeng atau nama karakter sebagai pengenal sifat/hasil
+                    // pilihan_id dipakai untuk menghitung hasil di server.
+                    // topeng_id sengaja tidak dikirim API publik.
                     const valueKey =
-                      opt.topeng_id ||
-                      opt.karakter ||
-                      opt.topeng?.topeng_nama ||
+                      opt.pilihan_id ??
+                      opt.pilihanId ??
+                      opt.topeng_id ??
+                      opt.karakter ??
+                      opt.topeng?.topeng_nama ??
                       textLabel;
 
                     return {
@@ -145,6 +149,28 @@ export default function QuizScreen() {
     });
   };
 
+  const finishQuiz = async () => {
+    if (submitting) return;
+
+    setSubmitting(true);
+    try {
+      const result = await api.getQuizResult(answers);
+      router.replace({
+        pathname: "/result",
+        params: {
+          topeng_id: String(result.topeng_id),
+        },
+      });
+    } catch (err: any) {
+      Alert.alert(
+        "Gagal Menampilkan Hasil",
+        err?.message || "Terjadi kesalahan saat menghitung hasil kuis."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const nextQuestion = () => {
     if (!selected) {
       Alert.alert(
@@ -170,31 +196,7 @@ export default function QuizScreen() {
       }
     }
 
-    // Hitung kemunculan pilihan terbanyak secara dinamis berdasarkan jawaban user
-    const counts: Record<string, number> = {};
-    answers.forEach((answer) => {
-      if (answer) {
-        counts[answer] = (counts[answer] || 0) + 1;
-      }
-    });
-
-    let bestResult = Object.keys(counts)[0] || "1";
-    let maxCount = -1;
-    for (const [key, count] of Object.entries(counts)) {
-      if (count > maxCount) {
-        maxCount = count;
-        bestResult = key;
-      }
-    }
-
-    // Arahkan ke halaman hasil dengan membawa topeng_id / kategori terpilih
-    router.replace({
-      pathname: "/result",
-      params: {
-        type: bestResult,
-        topeng_id: id || "",
-      },
-    });
+    void finishQuiz();
   };
 
   return (
@@ -309,13 +311,16 @@ export default function QuizScreen() {
           {/* Tombol Lanjut / Lihat Hasil */}
           <Pressable
             onPress={nextQuestion}
+            disabled={submitting}
             style={({ pressed }) => [
               styles.nextButton,
-              pressed && { opacity: 0.85 },
+              (pressed || submitting) && { opacity: 0.85 },
             ]}
           >
             <Text style={styles.nextButtonText}>
-              {index === totalQuestions - 1
+              {submitting
+                ? "Menghitung hasil..."
+                : index === totalQuestions - 1
                 ? "Lihat Hasil    →"
                 : "Lanjut    →"}
             </Text>

@@ -1,7 +1,7 @@
-export const API_HOST = "http://10.242.26.172:8000";
+export const API_HOST = "https://topengmalang.alwaysdata.net";
 export const BASE_URL = `${API_HOST}/api`;
 
-export const ECOMMERCE_URL = "http://10.242.26.172:5173";
+export const ECOMMERCE_URL = "https://web-e-commerce-eight.vercel.app";
 
 export type VideoTopeng = {
   video_id: number;
@@ -142,6 +142,23 @@ export const api = {
     const response = await apiRequest<any>(endpoint);
     const data = unwrapData<any>(response);
     return Array.isArray(data) ? data : data?.data || data?.kuis || data?.questions || [];
+  },
+
+  // Menghitung hasil kuis di server berdasarkan pilihan_id yang dijawab.
+  getQuizResult: async (pilihanIds: Array<number | string>): Promise<Topeng> => {
+    const response = await apiRequest<any>("/kuis/hasil", {
+      method: "POST",
+      body: JSON.stringify({ pilihan: pilihanIds.map(Number) }),
+    });
+    const data = unwrapData<any>(response);
+    const item = data?.topeng || data;
+    if (!item || !item.topeng_id) {
+      throw new Error("Hasil kuis tidak ditemukan.");
+    }
+    return {
+      ...item,
+      videos: Array.isArray(item.videos) ? item.videos : [],
+    };
   },
 };
 
