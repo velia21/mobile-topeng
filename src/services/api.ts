@@ -1,7 +1,7 @@
-export const API_HOST = "http://10.10.3.33:8000";
+export const API_HOST = "http://10.242.26.172:8000";
 export const BASE_URL = `${API_HOST}/api`;
 
-export const ECOMMERCE_URL = "http://10.10.3.33:5173/";
+export const ECOMMERCE_URL = "http://10.242.26.172:5173";
 
 export type VideoTopeng = {
   video_id: number;

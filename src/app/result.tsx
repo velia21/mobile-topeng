@@ -10,15 +10,8 @@ import {
   Text,
   View,
 } from "react-native";
-import {
-  router,
-  useLocalSearchParams,
-} from "expo-router";
+import { router } from "expo-router";
 import { C, Screen } from "../components/ui";
-import {
-  characterResults,
-  QuizType,
-} from "../data/masks";
 import api, {
   BASE_URL,
   getTopengImage,
@@ -26,21 +19,33 @@ import api, {
 } from "../services/api";
 
 // URL E-Commerce dengan port 5173 sesuai permintaan
-const ECOMMERCE_URL = "http://10.10.3.33:5173";
+const ECOMMERCE_URL = "http://10.242.26.172:5173";
+
+// Nama kelompok (bukan tokoh tunggal) yang tidak ikut digacha
+const EXCLUDED_NAMES = ["Sabrang", "Punakawan", "Prabu Klana"];
+
+const getId = (t: any) => String(t?.topeng_id ?? t?.id ?? "");
+
+// Disimpan di level modul supaya tetap ada saat user menekan "Coba Kuis Lagi"
+// (layar hasil dibuat ulang, tapi variabel ini tidak ikut reset)
+let lastResultId: string | null = null;
+
+// Pilih satu topeng acak, tapi bukan hasil kuis sebelumnya
+const pickRandom = (list: Topeng[]) => {
+  if (list.length === 0) return null;
+  const pool =
+    lastResultId && list.length > 1
+      ? list.filter((t) => getId(t) !== lastResultId)
+      : list;
+  const picked = pool[Math.floor(Math.random() * pool.length)] || null;
+  if (picked) lastResultId = getId(picked);
+  return picked;
+};
 
 export default function ResultScreen() {
-  const { type } = useLocalSearchParams<{ type: string }>();
-
-  const resultKey = (
-    Object.keys(characterResults).includes(type || "")
-      ? type
-      : "bijaksana"
-  ) as QuizType;
-
-  const result = characterResults[resultKey];
-
   const [topeng, setTopeng] = useState<Topeng | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -48,31 +53,29 @@ export default function ResultScreen() {
     async function loadTopeng() {
       try {
         setLoading(true);
+        setError("");
         const response = await api.getTopeng();
-        
-        const listData: Topeng[] = Array.isArray(response)
+
+        const rawList: Topeng[] = Array.isArray(response)
           ? response
           : (response as any)?.data || (response as any)?.topeng || [];
 
-        const found = listData.find((item: any) => {
-          const namaTopeng = (item?.topeng_nama || item?.nama || "").toLowerCase();
-          const keyword = result.keyword.toLowerCase();
-          const typeParam = (type || "").toLowerCase();
-          const firstWord = keyword.split(" ")[0];
+        // Buang kelompok (Sabrang, Punakawan, dll) dari pool gacha
+        const pool = rawList.filter(
+          (t: any) => !EXCLUDED_NAMES.includes(t?.topeng_nama)
+        );
 
-          return (
-            namaTopeng.includes(keyword) || 
-            keyword.includes(namaTopeng) ||
-            namaTopeng.includes(typeParam) ||
-            (firstWord.length > 2 && namaTopeng.includes(firstWord))
-          );
-        });
+        if (!active) return;
 
-        if (active) {
-          setTopeng(found || listData[0] || null);
+        if (pool.length === 0) {
+          setError("Data topeng belum tersedia.");
+          return;
         }
-      } catch (error) {
-        console.error("Gagal mengambil topeng hasil kuis:", error);
+
+        setTopeng(pickRandom(pool)); // gacha tiap layar hasil dibuka
+      } catch (e) {
+        console.error("Gagal mengambil topeng hasil kuis:", e);
+        if (active) setError("Gagal memuat hasil kuis.");
       } finally {
         if (active) setLoading(false);
       }
@@ -83,7 +86,7 @@ export default function ResultScreen() {
     return () => {
       active = false;
     };
-  }, [result.keyword, type]);
+  }, []);
 
   const openShop = async () => {
     try {
@@ -96,24 +99,15 @@ export default function ResultScreen() {
     }
   };
 
-  const getImageUrl = () => {
-    if (!topeng) return null;
-    const helperImage = getTopengImage(topeng);
-    if (helperImage) return helperImage;
+  const image = getImageOf(topeng);
+  const characterName = topeng?.topeng_nama || "Karakter Pilihan";
 
-    const rawImage = 
-      (topeng as any).image || 
-      (topeng as any).foto || 
-      (topeng as any).gambar || 
-      (topeng as any).topeng_foto ||
-      (topeng as any).file_path;
-
-    if (!rawImage) return null;
-    if (rawImage.startsWith("http")) return rawImage;
-    return `${BASE_URL}/${rawImage.replace(/^\/+/, "")}`;
-  };
-
-  const image = getImageUrl();
+  // Ringkasan singkat dari deskripsi database (maksimal 160 karakter)
+  const fullDesc =
+    topeng?.topeng_deskripsi ||
+    "Karakter ini merepresentasikan nilai luhur dan kepribadian dalam tradisi Topeng Malangan.";
+  const characterDesc =
+    fullDesc.length > 160 ? fullDesc.slice(0, 160).trim() + "..." : fullDesc;
 
   return (
     <Screen>
@@ -123,7 +117,7 @@ export default function ResultScreen() {
           <View style={styles.topHeader}>
             <View style={styles.mountainLeft} />
             <View style={styles.mountainRight} />
-            
+
             <View style={styles.headerBar}>
               <Pressable
                 onPress={() => router.replace("/quiz")}
@@ -131,9 +125,7 @@ export default function ResultScreen() {
               >
                 <Text style={styles.backText}>←</Text>
               </Pressable>
-              <Text style={styles.headerTitle}>
-                Hasil Kuis Karakter
-              </Text>
+              <Text style={styles.headerTitle}>Hasil Kuis Karakter</Text>
               <View style={{ width: 36 }} />
             </View>
           </View>
@@ -152,9 +144,7 @@ export default function ResultScreen() {
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderText}>
-                  Gambar Kosong
-                </Text>
+                <Text style={styles.placeholderText}>Gambar Kosong</Text>
               </View>
             )}
           </View>
@@ -166,78 +156,90 @@ export default function ResultScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.bodyContent}>
-            <Text style={styles.complete}>
-              Kuis Selesai!
-            </Text>
+            {error ? (
+              <>
+                <Text style={styles.complete}>Oops!</Text>
+                <Text style={styles.description}>{error}</Text>
+                <Pressable
+                  onPress={() => router.replace("/quiz")}
+                  style={({ pressed }) => [
+                    styles.customButton,
+                    styles.secondaryButtonBg,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.customButtonText}>↻   Coba Kuis Lagi</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={styles.complete}>Kuis Selesai!</Text>
 
-            <Text style={styles.small}>
-              HASIL PERJALANAN & KEPRIBADIANMU
-            </Text>
+                <Text style={styles.small}>
+                  HASIL PERJALANAN & KEPRIBADIANMU
+                </Text>
 
-            <View style={styles.resultCard}>
-              <Text style={styles.name}>
-                Kamu adalah {result.name}
-              </Text>
-            </View>
+                <View style={styles.resultCard}>
+                  <Text style={styles.name}>Kamu adalah {characterName}</Text>
+                </View>
 
-            <Text style={styles.description}>
-              {result.description}
-            </Text>
+                <Text style={styles.description}>{characterDesc}</Text>
 
-            {/* CARD PROMOSI E-COMMERCE */}
-            <View style={styles.tip}>
-              <View style={styles.badgeContainer}>
-                <Text style={styles.badgeText}>⭐ EKSKLUSIF & AUTENTIK</Text>
-              </View>
+                {/* CARD PROMOSI E-COMMERCE */}
+                <View style={styles.tip}>
+                  <View style={styles.badgeContainer}>
+                    <Text style={styles.badgeText}>⭐ EKSKLUSIF & AUTENTIK</Text>
+                  </View>
 
-              <Text style={styles.tipTitle}>
-                Bawa Pulang Mahakarya Asli {result.name}!
-              </Text>
+                  <Text style={styles.tipTitle}>
+                    Bawa Pulang Mahakarya Asli {characterName}!
+                  </Text>
 
-              <Text style={styles.tipText}>
-                Jangan hanya kenali karakternya, miliki ukiran kayu buatan tangan pengrajin lokal Malang. Dapatkan koleksi eksklusif dengan kualitas terbaik langsung dari sanggar budaya.
-              </Text>
-            </View>
+                  <Text style={styles.tipText}>
+                    Jangan hanya kenali karakternya, miliki ukiran kayu buatan
+                    tangan pengrajin lokal Malang.
+                  </Text>
+                </View>
 
-            {/* TOMBOL-TOMBOL AKSI */}
-            <Pressable
-              onPress={openShop}
-              style={({ pressed }) => [
-                styles.customButton,
-                styles.shopButtonBg,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={styles.customButtonText}>
-                Jelajahi Katalog & Beli Sekarang    →
-              </Text>
-            </Pressable>
+                {/* TOMBOL-TOMBOL AKSI */}
+                <Pressable
+                  onPress={openShop}
+                  style={({ pressed }) => [
+                    styles.customButton,
+                    styles.shopButtonBg,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.customButtonText}>
+                    Jelajahi Katalog & Beli Sekarang    →
+                  </Text>
+                </Pressable>
 
-            <Pressable
-              onPress={() => router.replace("/quiz")}
-              style={({ pressed }) => [
-                styles.customButton,
-                styles.secondaryButtonBg,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={styles.customButtonText}>
-                ↻   Coba Kuis Lagi
-              </Text>
-            </Pressable>
+                <Pressable
+                  onPress={() => router.replace("/quiz")}
+                  style={({ pressed }) => [
+                    styles.customButton,
+                    styles.secondaryButtonBg,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.customButtonText}>↻   Coba Kuis Lagi</Text>
+                </Pressable>
 
-            <Pressable
-              onPress={() => router.replace("/")}
-              style={({ pressed }) => [
-                styles.customButton,
-                styles.secondaryButtonBg,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={styles.customButtonText}>
-                ⌂   Kembali ke Kamera Utama
-              </Text>
-            </Pressable>
+                <Pressable
+                  onPress={() => router.replace("/")}
+                  style={({ pressed }) => [
+                    styles.customButton,
+                    styles.secondaryButtonBg,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.customButtonText}>
+                    ⌂   Kembali ke Kamera Utama
+                  </Text>
+                </Pressable>
+              </>
+            )}
           </View>
         </ScrollView>
 
@@ -249,6 +251,24 @@ export default function ResultScreen() {
       </View>
     </Screen>
   );
+}
+
+// Ambil URL gambar dari satu topeng (helper API, lalu fallback field umum)
+function getImageOf(t: Topeng | null): string | null {
+  if (!t) return null;
+  const helperImage = getTopengImage(t);
+  if (helperImage) return helperImage;
+
+  const rawImage =
+    (t as any).image ||
+    (t as any).foto ||
+    (t as any).gambar ||
+    (t as any).topeng_foto ||
+    (t as any).file_path;
+
+  if (!rawImage) return null;
+  if (String(rawImage).startsWith("http")) return rawImage;
+  return `${BASE_URL}/${String(rawImage).replace(/^\/+/, "")}`;
 }
 
 const styles = StyleSheet.create({
@@ -408,8 +428,8 @@ const styles = StyleSheet.create({
   description: {
     color: "#543825",
     textAlign: "center",
-    lineHeight: 28,
-    fontSize: 18,
+    lineHeight: 26,
+    fontSize: 16,
     marginTop: 18,
     paddingHorizontal: 6,
     fontWeight: "600",
@@ -444,20 +464,20 @@ const styles = StyleSheet.create({
   tipTitle: {
     color: C.dark,
     fontWeight: "900",
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 24,
   },
   tipText: {
     color: "#553D2E",
-    lineHeight: 26,
-    fontSize: 16,
-    marginTop: 10,
+    lineHeight: 22,
+    fontSize: 14,
+    marginTop: 8,
     fontWeight: "500",
   },
   customButton: {
     width: "100%",
     borderRadius: 14,
-    paddingVertical: 20,
+    paddingVertical: 18,
     paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -477,7 +497,7 @@ const styles = StyleSheet.create({
   },
   customButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "900",
     textAlign: "center",
     letterSpacing: 0.5,

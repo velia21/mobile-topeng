@@ -34,8 +34,6 @@ export default function QuizScreen() {
 
         if (active) {
           if (rawData && rawData.length > 0) {
-            console.log("Struktur rawData dari Laravel:", JSON.stringify(rawData, null, 2));
-
             // Memetakan data pertanyaan dan pilihan dengan ekstraksi universal
             const formatted = rawData.map((item: any) => {
               const optionsList =
@@ -48,33 +46,22 @@ export default function QuizScreen() {
 
               const formattedOptions = Array.isArray(optionsList)
                 ? optionsList.map((opt: any) => {
-                    // Jika elemen pilihan berupa string langsung (misal: ["Opsi A", "Opsi B"])
                     if (typeof opt === "string") {
                       return { value: opt, label: opt };
                     }
 
-                    // Jika elemen pilihan berupa objek, ambil teks dari key apapun yang tersedia
                     const textLabel =
+                      opt.pilihan_jawaban ||
                       opt.pilihan_teks ||
                       opt.teks ||
                       opt.label ||
-                      opt.jawaban ||
-                      opt.pilihan ||
-                      opt.option_text ||
-                      opt.text ||
-                      opt.answer ||
-                      opt.name ||
-                      // Fallback: cari nilai string pertama di dalam properti objek jika key spesifik tidak ketemu
-                      Object.values(opt).find((val) => typeof val === "string" && val.length > 1) ||
                       "Pilihan jawaban";
 
+                    // Ambil ID topeng atau nama karakter sebagai pengenal sifat/hasil
                     const valueKey =
+                      opt.topeng_id ||
                       opt.karakter ||
-                      opt.kategori ||
-                      opt.value ||
-                      opt.target ||
-                      opt.option_value ||
-                      opt.sifat ||
+                      opt.topeng?.topeng_nama ||
                       textLabel;
 
                     return {
@@ -96,14 +83,12 @@ export default function QuizScreen() {
               };
             });
 
-            console.log("Hasil formatting questions:", JSON.stringify(formatted, null, 2));
             setQuestions(formatted);
           } else {
             setError("Belum ada data pertanyaan kuis di panel admin.");
           }
         }
       } catch (err: any) {
-        console.error("Gagal mengambil kuis dari database admin:", err);
         if (active) {
           setError(err?.message || "Gagal terhubung ke database admin.");
         }
@@ -185,33 +170,28 @@ export default function QuizScreen() {
       }
     }
 
-    const counts: Record<string, number> = {
-      bijaksana: 0,
-      berani: 0,
-      lembut: 0,
-      ceria: 0,
-    };
-
+    // Hitung kemunculan pilihan terbanyak secara dinamis berdasarkan jawaban user
+    const counts: Record<string, number> = {};
     answers.forEach((answer) => {
       if (answer) {
-        const key = answer.toLowerCase();
-        if (counts[key] !== undefined) {
-          counts[key] += 1;
-        } else {
-          counts["bijaksana"] = (counts["bijaksana"] || 0) + 1;
-        }
+        counts[answer] = (counts[answer] || 0) + 1;
       }
     });
 
-    const priority = ["bijaksana", "berani", "lembut", "ceria"];
-    const result = priority.reduce((best, currentKey) =>
-      (counts[currentKey] || 0) > (counts[best] || 0) ? currentKey : best
-    );
+    let bestResult = Object.keys(counts)[0] || "1";
+    let maxCount = -1;
+    for (const [key, count] of Object.entries(counts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        bestResult = key;
+      }
+    }
 
+    // Arahkan ke halaman hasil dengan membawa topeng_id / kategori terpilih
     router.replace({
       pathname: "/result",
       params: {
-        type: result,
+        type: bestResult,
         topeng_id: id || "",
       },
     });

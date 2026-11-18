@@ -13,7 +13,7 @@ const COLORS = {
   dark: "#3D2B1F",
   cream: "#FFF8EF",
   white: "#FFFFFF",
-  muted: "#8C7768",
+  muted: "#4A3728", // Dibuat jauh lebih gelap/pekat agar kontras maksimal
 };
 
 // MENGAMBIL ID TOPENG DARI QR CODE
@@ -161,6 +161,7 @@ export default function HomeScreen() {
           TOPENG MALANGAN
         </Text>
 
+        {/* Subtitle diperbesar ukurannya & dibuat sangat jelas */}
         <Text style={styles.subtitle}>
           JELAJAHI CERITA DI BALIK TOPENG
         </Text>
@@ -258,43 +259,45 @@ export default function HomeScreen() {
 }
 
 // =====================================================
-// STYLE SCAN QR (Ukuran Font Telah Disesuaikan)
+// STYLE SCAN QR (FONT DIPERBESAR & DIPERTEGAS)
 // =====================================================
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingTop: 12,
   },
 
   header: {
     alignItems: "center",
-    paddingTop: 18,
-    paddingBottom: 22,
+    paddingTop: 16,
+    paddingBottom: 18,
   },
 
   brand: {
     color: COLORS.brown,
-    fontSize: 16, // Disesuaikan dari 20
+    fontSize: 22, // Jauh lebih besar dari sebelumnya (19)
     fontWeight: "900",
     letterSpacing: 2.5,
   },
 
   subtitle: {
     color: COLORS.muted,
-    fontSize: 9, // Disesuaikan dari 10
-    letterSpacing: 1.5,
+    fontSize: 13, // Jauh lebih besar dan jelas dari sebelumnya (11)
+    fontWeight: "800", // Dibuat sangat tebal
+    letterSpacing: 2.0,
     marginTop: 6,
+    textAlign: "center",
   },
 
   scannerCard: {
     flex: 1,
     backgroundColor: COLORS.sand,
     alignItems: "center",
-    borderRadius: 3,
-    paddingTop: 36,
+    borderRadius: 6,
+    paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 40,
     overflow: "hidden",
@@ -304,35 +307,36 @@ const styles = StyleSheet.create({
 
   smallTitle: {
     color: COLORS.brown,
-    fontSize: 10, // Disesuaikan dari 12
+    fontSize: 12, // Diperbesar dari 11
     fontWeight: "800",
     letterSpacing: 1.5,
     textAlign: "center",
-    marginTop: 5,
+    marginTop: 4,
   },
 
   title: {
     color: COLORS.dark,
-    fontSize: 20, // Disesuaikan dari 24
+    fontSize: 26, // Diperbesar dari 23
     fontWeight: "900",
-    marginTop: 14,
+    marginTop: 8,
   },
 
   description: {
     color: COLORS.dark,
-    fontSize: 12, // Disesuaikan dari 13
-    lineHeight: 18,
+    fontSize: 14.5, // Diperbesar dari 13.5
+    lineHeight: 20,
     textAlign: "center",
     marginTop: 6,
-    maxWidth: 280,
+    maxWidth: 300,
+    fontWeight: "600",
   },
 
   cameraFrame: {
-    width: 206,
-    height: 260, // Sedikit disesuaikan agar pas
+    width: 215,
+    height: 265,
     backgroundColor: COLORS.dark,
-    borderRadius: 13,
-    marginTop: 20,
+    borderRadius: 14,
+    marginTop: 16,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -348,15 +352,16 @@ const styles = StyleSheet.create({
 
   qrSymbol: {
     color: COLORS.white,
-    fontSize: 65, // Disesuaikan dari 75
+    fontSize: 70,
   },
 
   permissionText: {
     color: COLORS.white,
-    fontSize: 10, // Disesuaikan dari 11
+    fontSize: 13,
     textAlign: "center",
     marginTop: 8,
     paddingHorizontal: 15,
+    fontWeight: "700",
   },
 
   qrOverlay: {
@@ -367,8 +372,8 @@ const styles = StyleSheet.create({
   },
 
   qrTarget: {
-    width: 140,
-    height: 140,
+    width: 145,
+    height: 145,
     borderColor: COLORS.white,
     borderWidth: 2,
     position: "relative",
@@ -428,8 +433,8 @@ const styles = StyleSheet.create({
 
   loadingText: {
     color: COLORS.white,
-    fontSize: 11, // Disesuaikan dari 12
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
   },
 
   cloudLeft: {
@@ -468,7 +473,7 @@ const styles = StyleSheet.create({
 
   templeIcon: {
     color: "#A16A3E",
-    fontSize: 55, // Disesuaikan dari 65
+    fontSize: 55,
     opacity: 0.8,
   },
 
